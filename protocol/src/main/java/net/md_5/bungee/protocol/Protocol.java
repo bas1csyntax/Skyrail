@@ -35,6 +35,7 @@ import net.md_5.bungee.protocol.packet.PlayerListHeaderFooter;
 import net.md_5.bungee.protocol.packet.PlayerListItem;
 import net.md_5.bungee.protocol.packet.PlayerListItemRemove;
 import net.md_5.bungee.protocol.packet.PlayerListItemUpdate;
+import net.md_5.bungee.protocol.packet.PlayerSession;
 import net.md_5.bungee.protocol.packet.PluginMessage;
 import net.md_5.bungee.protocol.packet.Respawn;
 import net.md_5.bungee.protocol.packet.ScoreboardDisplay;
@@ -544,6 +545,12 @@ public enum Protocol
                     StartConfiguration.class,
                     StartConfiguration::new,
                     map( ProtocolConstants.MINECRAFT_1_20_2, 0x0B )
+            );
+            TO_SERVER.registerPacket(
+                    PlayerSession.class,
+                    PlayerSession::new,
+                    map( ProtocolConstants.MINECRAFT_1_19_3, 0x20 ),
+                    map( ProtocolConstants.MINECRAFT_1_19_4, 0x06 )
             );
         }
     },
