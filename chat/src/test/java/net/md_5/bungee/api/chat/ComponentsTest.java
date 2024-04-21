@@ -563,8 +563,7 @@ public class ComponentsTest
         BaseComponent[] test2 = TextComponent.fromLegacyText( "Text http://spigotmc.org " + ChatColor.GREEN + "google.com/test" );
 
         assertEquals( "Text http://spigotmc.org google.com/test", BaseComponent.toPlainText( test2 ) );
-        //The extra ChatColor instances are sometimes inserted when not needed but it doesn't change the result
-        assertEquals( "Text http://spigotmc.org " + ChatColor.GREEN + "google.com/test" + ChatColor.GREEN, BaseComponent.toLegacyText( test2 ) );
+        assertEquals( "Text http://spigotmc.org " + ChatColor.GREEN + "google.com/test", BaseComponent.toLegacyText( test2 ) );
 
         ClickEvent url1 = test2[1].getClickEvent();
         assertNotNull( url1 );
@@ -585,35 +584,31 @@ public class ComponentsTest
 
         assertEquals( "Given Golden Sword * 5 to thinkofdeath", component.toPlainText() );
         component.setColor( ChatColor.RED );
-        assertEquals( ChatColor.RED + "Given " + ChatColor.RED + "Golden Sword" + ChatColor.RED + " * " + ChatColor.RED
-                + "5" + ChatColor.RED + " to " + ChatColor.RED + "thinkofdeath", component.toLegacyText() );
+        assertEquals( ChatColor.RED + "Given Golden Sword * 5 to thinkofdeath", component.toLegacyText() );
         item.setColor( ChatColor.AQUA );
-        assertEquals( ChatColor.RED + "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RED + " * " + ChatColor.RED
-                + "5" + ChatColor.RED + " to " + ChatColor.RED + "thinkofdeath", component.toLegacyText() );
+        assertEquals( ChatColor.RED + "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RED + " * 5 to thinkofdeath",
+                component.toLegacyText() );
         component.setColor( null );
-        // fails, actual value is "Given §bGolden Sword * §f5 to §fthinkofdeath"
-        // assertEquals( "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RESET + " * 5 to thinkofdeath", component.toLegacyText() );
+        assertEquals( "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RESET + " * 5 to thinkofdeath", component.toLegacyText() );
 
         BaseComponent legacyColorTest = new ComponentBuilder( "Test " ).color( ChatColor.RED ).append( component ).build();
-        assertEquals( ChatColor.RED + "Test " + ChatColor.RED + "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RED
-                + " * " + ChatColor.RED + "5" + ChatColor.RED + " to " + ChatColor.RED + "thinkofdeath", legacyColorTest.toLegacyText() );
+        assertEquals( ChatColor.RED + "Test Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RED
+                + " * 5 to thinkofdeath", legacyColorTest.toLegacyText() );
 
         BaseComponent legacyColorTest2 = new TextComponent( "Test " );
         legacyColorTest2.addExtra( new ComponentBuilder( "abc " ).color( ChatColor.GRAY ).build() );
         legacyColorTest2.addExtra( component );
         legacyColorTest2.addExtra( new ComponentBuilder( " def" ).build() );
         assertEquals( "Test " + ChatColor.GRAY + "abc " + ChatColor.RED + "Given " + ChatColor.AQUA + "Golden Sword"
-                + ChatColor.RED + " * " + ChatColor.RED + "5" + ChatColor.RED + " to " + ChatColor.RED + "thinkofdeath"
-                + ChatColor.WHITE + " def", legacyColorTest2.toLegacyText() );
+                + ChatColor.RED + " * 5 to thinkofdeath" + ChatColor.RESET + " def", legacyColorTest2.toLegacyText() );
         legacyColorTest2.setColor( ChatColor.RED );
         assertEquals( ChatColor.RED + "Test " + ChatColor.GRAY + "abc " + ChatColor.RED + "Given " + ChatColor.AQUA
-                + "Golden Sword" + ChatColor.RED + " * " + ChatColor.RED + "5" + ChatColor.RED + " to " + ChatColor.RED
-                + "thinkofdeath" + ChatColor.RED + " def", legacyColorTest2.toLegacyText() );
+                + "Golden Sword" + ChatColor.RED + " * 5 to thinkofdeath def", legacyColorTest2.toLegacyText() );
 
         TranslatableComponent positional = new TranslatableComponent( "book.pageIndicator", "5", "50" );
 
         assertEquals( "Page 5 of 50", positional.toPlainText() );
-        assertEquals( "Page " + ChatColor.WHITE + "5 of " + ChatColor.WHITE + "50", positional.toLegacyText() );
+        assertEquals( "Page 5 of 50", positional.toLegacyText() );
 
         TranslatableComponent one_four_two = new TranslatableComponent( "filled_map.buried_treasure" );
         assertEquals( "Buried Treasure Map", one_four_two.toPlainText() );
@@ -932,7 +927,7 @@ public class ComponentsTest
         component.addExtra( new ComponentBuilder( " xd" ).build() );
 
         assertEquals( "Hello World! xd", component.toPlainText() );
-        assertEquals( ChatColor.GOLD + "Hello " + ChatColor.GOLD + ChatColor.BOLD + "World" + ChatColor.RED + "!"
+        assertEquals( ChatColor.GOLD + "Hello " + ChatColor.BOLD + "World" + ChatColor.RED + "!"
                 + ChatColor.GOLD + " xd", component.toLegacyText() );
     }
 
@@ -947,8 +942,8 @@ public class ComponentsTest
         assertEquals( "Hello World! xd", component.toPlainText() );
         // Empty extra text component 2 (holding extra "!") adds the redudant gold formatting,
         // see TextComponent#toLegacyText comment as to why we keep it
-        assertEquals( ChatColor.GOLD + "Hello " + ChatColor.GOLD + ChatColor.GOLD + ChatColor.BOLD + "World"
-                + ChatColor.GOLD + ChatColor.RED + "!" + ChatColor.GOLD + ChatColor.GOLD + " xd", component.toLegacyText() );
+        assertEquals( ChatColor.GOLD + "Hello " + ChatColor.BOLD + "World" + ChatColor.GOLD + ChatColor.RED + "!"
+                + ChatColor.GOLD + " xd", component.toLegacyText() );
     }
 
     @Test
@@ -964,7 +959,6 @@ public class ComponentsTest
         };
 
         assertEquals( "Hello World!", BaseComponent.toPlainText( components ) );
-        // fails, actual result doesn't reset or whiten the "!": "Hello §lWorld!"
         assertEquals( "Hello " + ChatColor.BOLD + "World" + ChatColor.RESET + "!", BaseComponent.toLegacyText( components ) );
     }
 }

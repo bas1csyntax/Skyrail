@@ -12,7 +12,7 @@ public class TranslatableComponentTest
     {
         TranslatableComponent testComponent = new TranslatableComponent( "Test string with %s placeholders: %s", 2, "aoeu" );
         assertEquals( "Test string with 2 placeholders: aoeu", testComponent.toPlainText() );
-        assertEquals( "§fTest string with §f2§f placeholders: §faoeu", testComponent.toLegacyText() );
+        assertEquals( "Test string with 2 placeholders: aoeu", testComponent.toLegacyText() );
     }
 
     @Test
@@ -23,6 +23,6 @@ public class TranslatableComponentTest
         BaseComponent[] baseComponents = ComponentSerializer.parse( jsonString );
 
         assertEquals( "Test string with a placeholder", BaseComponent.toPlainText( baseComponents ) );
-        assertEquals( "§fTest string with §fa§f placeholder", BaseComponent.toLegacyText( baseComponents ) );
+        assertEquals( "Test string with a placeholder", BaseComponent.toLegacyText( baseComponents ) );
     }
 }

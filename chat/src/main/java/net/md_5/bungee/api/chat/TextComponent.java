@@ -265,7 +265,7 @@ public final class TextComponent extends BaseComponent
         {
             return;
         }
-        setExtra( new ArrayList<BaseComponent>( Arrays.asList( extras ) ) );
+        setExtra( new ArrayList<>( Arrays.asList( extras ) ) );
     }
 
     /**
@@ -287,11 +287,14 @@ public final class TextComponent extends BaseComponent
     }
 
     @Override
-    protected void toLegacyText(StringBuilder builder)
+    ComponentStyle toLegacyText(StringBuilder builder, ChatColor baseColor, ComponentStyle currentLegacy)
     {
-        addFormat( builder );
+        // cannot eliminate formatting codes if text is empty to keep test case testFormattingOnlyTextConversion happy
+        // (this could be solved to always add formatting if (parent == null) and to not ignore formatting at the end in
+        // general in case plugins are doing weird combinations with conversions
+        currentLegacy = addFormat( builder, baseColor, currentLegacy );
         builder.append( text );
-        super.toLegacyText( builder );
+        return super.toLegacyText( builder, baseColor, currentLegacy );
     }
 
     @Override

@@ -200,6 +200,15 @@ public final class ComponentStyle implements Cloneable
                 && strikethrough == null && obfuscated == null;
     }
 
+    boolean isLegacyFormattingUpgrade(ComponentStyle newStyle)
+    {
+        return ( newStyle.isBold() || !isBold() )
+                && ( newStyle.isItalic() || !isItalic() )
+                && ( newStyle.isUnderlined() || !isUnderlined() )
+                && ( newStyle.isStrikethrough() || !isStrikethrough() )
+                && ( newStyle.isObfuscated() || !isObfuscated() );
+    }
+
     @Override
     public ComponentStyle clone()
     {
