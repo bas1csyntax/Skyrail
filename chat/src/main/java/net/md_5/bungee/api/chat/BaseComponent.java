@@ -215,11 +215,29 @@ public abstract class BaseComponent
     public static String toLegacyText(BaseComponent... components)
     {
         StringBuilder builder = new StringBuilder();
+        ComponentStyle currentLegacy = new ComponentStyle();
+        currentLegacy.setColor( ChatColor.RESET );
+
+        toLegacyText( builder, currentLegacy, components );
+        return builder.toString();
+    }
+
+    /**
+     * Converts the components to a string that uses the old formatting codes
+     * ({@link net.md_5.bungee.api.ChatColor#COLOR_CHAR}
+     *
+     * @param builder the StringBuilder to append to
+     * @param currentLegacy the style at the end of {@code builder}
+     * @param components the components to convert
+     * @return the style at the end of the legacy string
+     */
+    public static ComponentStyle toLegacyText(StringBuilder builder, ComponentStyle currentLegacy, BaseComponent... components)
+    {
         for ( BaseComponent msg : components )
         {
-            builder.append( msg.toLegacyText() );
+            currentLegacy = msg.toLegacyText( builder, currentLegacy );
         }
-        return builder.toString();
+        return currentLegacy;
     }
 
     /**
@@ -273,15 +291,20 @@ public abstract class BaseComponent
      */
     public ChatColor getColor()
     {
-        if ( !style.hasColor() )
+        return getColor( ChatColor.WHITE );
+    }
+
+    ChatColor getColor(ChatColor def)
+    {
+        if ( style.hasColor() )
         {
-            if ( parent == null )
-            {
-                return ChatColor.WHITE;
-            }
-            return parent.getColor();
+            return style.getColor();
         }
-        return style.getColor();
+        if ( parent == null )
+        {
+            return def;
+        }
+        return parent.getColor( def );
     }
 
     /**
@@ -651,43 +674,148 @@ public abstract class BaseComponent
     public String toLegacyText()
     {
         StringBuilder builder = new StringBuilder();
-        toLegacyText( builder );
+        ComponentStyle currentLegacy = new ComponentStyle();
+        currentLegacy.setColor( ChatColor.RESET );
+        toLegacyText( builder, currentLegacy );
         return builder.toString();
     }
 
-    void toLegacyText(StringBuilder builder)
+    /**
+     * Converts the component to a string that uses the old formatting codes
+     * ({@link net.md_5.bungee.api.ChatColor#COLOR_CHAR}
+     *
+     * @param currentLegacy the style at the end of the string the result of this method will be appended to
+     * @return the string in the old format
+     */
+    public String toLegacyText(ComponentStyle currentLegacy)
     {
-        if ( extra != null )
-        {
-            for ( BaseComponent e : extra )
-            {
-                e.toLegacyText( builder );
-            }
-        }
+        StringBuilder builder = new StringBuilder();
+        toLegacyText( builder, currentLegacy );
+        return builder.toString();
     }
 
-    void addFormat(StringBuilder builder)
+    /**
+     * Converts the component to a string that uses the old formatting codes
+     * ({@link net.md_5.bungee.api.ChatColor#COLOR_CHAR}
+     *
+     * @param builder the StringBuilder to append to
+     * @param currentLegacy the style at the end of {@code builder}
+     * @return the style at the end of the legacy string
+     */
+    public ComponentStyle toLegacyText(StringBuilder builder, ComponentStyle currentLegacy)
     {
-        builder.append( getColor() );
-        if ( isBold() )
+        currentLegacy = currentLegacy.clone();
+        if ( !currentLegacy.hasColor() )
         {
-            builder.append( ChatColor.BOLD );
+            currentLegacy.setColor( ChatColor.RESET );
         }
-        if ( isItalic() )
+        return toLegacyText( builder, currentLegacy.hasColor() ? currentLegacy.getColor() : ChatColor.RESET, currentLegacy );
+    }
+
+    /**
+     * Converts the component to a string that uses the old formatting codes
+     * ({@link net.md_5.bungee.api.ChatColor#COLOR_CHAR}
+     *
+     * @param builder the StringBuilder to append to
+     * @param baseColor the color to use if no color is set, but a format downgrade is needed
+     * @param currentLegacy the style at the end of {@code builder}
+     * @return the new current style at the end of the {@code builder}
+     */
+    ComponentStyle toLegacyText(StringBuilder builder, ChatColor baseColor, ComponentStyle currentLegacy)
+    {
+        if ( extra == null )
         {
-            builder.append( ChatColor.ITALIC );
+            return currentLegacy;
         }
-        if ( isUnderlined() )
+        for ( BaseComponent e : extra )
         {
-            builder.append( ChatColor.UNDERLINE );
+            currentLegacy = e.toLegacyText( builder, baseColor, currentLegacy );
         }
-        if ( isStrikethrough() )
+        return currentLegacy;
+    }
+
+    private static boolean colorEquals(ChatColor a, ChatColor b)
+    {
+        if ( a == b )
         {
-            builder.append( ChatColor.STRIKETHROUGH );
+            return true;
         }
-        if ( isObfuscated() )
+        if ( a == null || b == null )
         {
-            builder.append( ChatColor.MAGIC );
+            return false;
         }
+        if ( ChatColor.RESET.equals( a ) )
+        {
+            return ChatColor.WHITE.equals( b ) || ChatColor.RESET.equals( b );
+        }
+        if ( ChatColor.RESET.equals( b ) )
+        {
+            return ChatColor.WHITE.equals( a ) || ChatColor.RESET.equals( a );
+        }
+        return a.equals( b );
+    }
+
+    /**
+     * @param builder the StringBuilder to append to
+     * @param baseColor the color to use if no color is set, but a format downgrade is needed
+     * @param currentLegacy the style at the end of {@code builder}
+     * @return the new current style at the end of {@code builder}
+     */
+    ComponentStyle addFormat(StringBuilder builder, ChatColor baseColor, ComponentStyle currentLegacy)
+    {
+        // Check if we can skip adding color code
+        if ( colorEquals( getColor(), currentLegacy.getColor() ) && currentLegacy.isLegacyFormattingUpgrade( style ) )
+        {
+            if ( isBold() && !currentLegacy.isBold() )
+            {
+                builder.append( ChatColor.BOLD );
+            }
+            if ( isItalic() && !currentLegacy.isItalic() )
+            {
+                builder.append( ChatColor.ITALIC );
+            }
+            if ( isUnderlined() && !currentLegacy.isUnderlined() )
+            {
+                builder.append( ChatColor.UNDERLINE );
+            }
+            if ( isStrikethrough() && !currentLegacy.isStrikethrough() )
+            {
+                builder.append( ChatColor.STRIKETHROUGH );
+            }
+            if ( isObfuscated() && !currentLegacy.isObfuscated() )
+            {
+                builder.append( ChatColor.MAGIC );
+            }
+        } else
+        {
+            builder.append( getColor( baseColor ) == null ? baseColor : getColor( baseColor ) );
+            if ( isBold() )
+            {
+                builder.append( ChatColor.BOLD );
+            }
+            if ( isItalic() )
+            {
+                builder.append( ChatColor.ITALIC );
+            }
+            if ( isUnderlined() )
+            {
+                builder.append( ChatColor.UNDERLINE );
+            }
+            if ( isStrikethrough() )
+            {
+                builder.append( ChatColor.STRIKETHROUGH );
+            }
+            if ( isObfuscated() )
+            {
+                builder.append( ChatColor.MAGIC );
+            }
+        }
+        currentLegacy = style;
+        if ( currentLegacy.getColor() == null )
+        {
+            currentLegacy = style.clone();
+            currentLegacy.setColor( getColor( baseColor ) == null ? baseColor : getColor( baseColor ) );
+        }
+        return currentLegacy;
     }
 }

@@ -124,7 +124,8 @@ public class ComponentsTest
         T component = componentBuilder.apply( builder );
         emptyAssertion.accept( component );
 
-        for ( int i = 0; i < 3; i++ )
+        builder.append( "part: 0" ); // build() with one part will not be nested
+        for ( int i = 1; i < 3; i++ )
         {
             builder.append( "part:" + i );
             component = componentBuilder.apply( builder );
@@ -189,6 +190,21 @@ public class ComponentsTest
     {
         String text = "§a§lHello §f§kworld§7!";
         assertEquals( text, BaseComponent.toLegacyText( TextComponent.fromLegacyText( text ) ) );
+    }
+
+    @Test
+    public void testToLegacyFromLegacyNew()
+    {
+        String text = "" + ChatColor.GREEN + ChatColor.BOLD + "Hello " + ChatColor.WHITE + ChatColor.MAGIC + "world" + ChatColor.GRAY + "!";
+        assertEquals( text, BaseComponent.toLegacyText( TextComponent.fromLegacy( text ) ) );
+    }
+
+    @Test
+    public void testNoColorComponent()
+    {
+        String json = "{\"text\":\"Hello World\"}";
+        BaseComponent[] components = ComponentSerializer.parse( json );
+        assertEquals( "Hello World", BaseComponent.toLegacyText( components ) );
     }
 
     @Test
@@ -472,8 +488,7 @@ public class ComponentsTest
                 ComponentBuilder::build,
                 (component, index) -> component.getExtra().get( index ),
                 (component) -> BaseComponent.toPlainText( component ),
-                // An extra format code is appended to the beginning because there is an empty TextComponent at the start of every component
-                ChatColor.WHITE.toString() + ChatColor.YELLOW + "Hello " + ChatColor.GREEN + "world!",
+                ChatColor.YELLOW + "Hello " + ChatColor.GREEN + "world!",
                 (component) -> BaseComponent.toLegacyText( component )
         );
     }
@@ -511,8 +526,7 @@ public class ComponentsTest
         testBuilderAppendLegacy(
                 ComponentBuilder::build,
                 (component) -> BaseComponent.toPlainText( component ),
-                // An extra format code is appended to the beginning because there is an empty TextComponent at the start of every component
-                ChatColor.WHITE.toString() + ChatColor.YELLOW + "Hello " + ChatColor.GREEN + "world!",
+                ChatColor.YELLOW + "Hello " + ChatColor.GREEN + "world!",
                 (component) -> BaseComponent.toLegacyText( component )
         );
     }
@@ -549,9 +563,7 @@ public class ComponentsTest
         BaseComponent[] test2 = TextComponent.fromLegacyText( "Text http://spigotmc.org " + ChatColor.GREEN + "google.com/test" );
 
         assertEquals( "Text http://spigotmc.org google.com/test", BaseComponent.toPlainText( test2 ) );
-        //The extra ChatColor instances are sometimes inserted when not needed but it doesn't change the result
-        assertEquals( ChatColor.WHITE + "Text " + ChatColor.WHITE + "http://spigotmc.org" + ChatColor.WHITE
-                + " " + ChatColor.GREEN + "google.com/test" + ChatColor.GREEN, BaseComponent.toLegacyText( test2 ) );
+        assertEquals( "Text http://spigotmc.org " + ChatColor.GREEN + "google.com/test", BaseComponent.toLegacyText( test2 ) );
 
         ClickEvent url1 = test2[1].getClickEvent();
         assertNotNull( url1 );
@@ -568,20 +580,35 @@ public class ComponentsTest
     public void testTranslateComponent()
     {
         TranslatableComponent item = new TranslatableComponent( "item.swordGold.name" );
-        item.setColor( ChatColor.AQUA );
-        TranslatableComponent translatableComponent = new TranslatableComponent( "commands.give.success",
-                item, "5",
-                "thinkofdeath" );
+        TranslatableComponent component = new TranslatableComponent( "commands.give.success", item, "5", "thinkofdeath" );
 
-        assertEquals( "Given Golden Sword * 5 to thinkofdeath", translatableComponent.toPlainText() );
-        assertEquals( ChatColor.WHITE + "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.WHITE
-                + " * " + ChatColor.WHITE + "5" + ChatColor.WHITE + " to " + ChatColor.WHITE + "thinkofdeath",
-                translatableComponent.toLegacyText() );
+        assertEquals( "Given Golden Sword * 5 to thinkofdeath", component.toPlainText() );
+        component.setColor( ChatColor.RED );
+        assertEquals( ChatColor.RED + "Given Golden Sword * 5 to thinkofdeath", component.toLegacyText() );
+        item.setColor( ChatColor.AQUA );
+        assertEquals( ChatColor.RED + "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RED + " * 5 to thinkofdeath",
+                component.toLegacyText() );
+        component.setColor( null );
+        assertEquals( "Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RESET + " * 5 to thinkofdeath", component.toLegacyText() );
+
+        BaseComponent legacyColorTest = new ComponentBuilder( "Test " ).color( ChatColor.RED ).append( component ).build();
+        assertEquals( ChatColor.RED + "Test Given " + ChatColor.AQUA + "Golden Sword" + ChatColor.RED
+                + " * 5 to thinkofdeath", legacyColorTest.toLegacyText() );
+
+        BaseComponent legacyColorTest2 = new TextComponent( "Test " );
+        legacyColorTest2.addExtra( new ComponentBuilder( "abc " ).color( ChatColor.GRAY ).build() );
+        legacyColorTest2.addExtra( component );
+        legacyColorTest2.addExtra( new ComponentBuilder( " def" ).build() );
+        assertEquals( "Test " + ChatColor.GRAY + "abc " + ChatColor.RED + "Given " + ChatColor.AQUA + "Golden Sword"
+                + ChatColor.RED + " * 5 to thinkofdeath" + ChatColor.RESET + " def", legacyColorTest2.toLegacyText() );
+        legacyColorTest2.setColor( ChatColor.RED );
+        assertEquals( ChatColor.RED + "Test " + ChatColor.GRAY + "abc " + ChatColor.RED + "Given " + ChatColor.AQUA
+                + "Golden Sword" + ChatColor.RED + " * 5 to thinkofdeath def", legacyColorTest2.toLegacyText() );
 
         TranslatableComponent positional = new TranslatableComponent( "book.pageIndicator", "5", "50" );
 
         assertEquals( "Page 5 of 50", positional.toPlainText() );
-        assertEquals( ChatColor.WHITE + "Page " + ChatColor.WHITE + "5" + ChatColor.WHITE + " of " + ChatColor.WHITE + "50", positional.toLegacyText() );
+        assertEquals( "Page 5 of 50", positional.toLegacyText() );
 
         TranslatableComponent one_four_two = new TranslatableComponent( "filled_map.buried_treasure" );
         assertEquals( "Buried Treasure Map", one_four_two.toPlainText() );
@@ -604,8 +631,7 @@ public class ComponentsTest
         testBuilder(
                 ComponentBuilder::build,
                 (component) -> BaseComponent.toPlainText( component ),
-                // An extra format code is appended to the beginning because there is an empty TextComponent at the start of every component
-                ChatColor.WHITE.toString() + ChatColor.RED + "Hello " + ChatColor.BLUE + ChatColor.BOLD + "World" + ChatColor.YELLOW + ChatColor.BOLD + "!",
+                ChatColor.RED + "Hello " + ChatColor.BLUE + ChatColor.BOLD + "World" + ChatColor.YELLOW + ChatColor.BOLD + "!",
                 (component) -> BaseComponent.toLegacyText( component )
         );
     }
@@ -890,5 +916,49 @@ public class ComponentsTest
     private static String fromAndToLegacyText(String legacyText)
     {
         return BaseComponent.toLegacyText( TextComponent.fromLegacyText( legacyText ) );
+    }
+
+    @Test
+    public void testExtraFormatting()
+    {
+        BaseComponent component = new ComponentBuilder( "Hello " ).color( ChatColor.GOLD ).build();
+        component.addExtra( new ComponentBuilder( "World" ).bold( true ).build() );
+        component.addExtra( new ComponentBuilder( "!" ).color( ChatColor.RED ).build() );
+        component.addExtra( new ComponentBuilder( " xd" ).build() );
+
+        assertEquals( "Hello World! xd", component.toPlainText() );
+        assertEquals( ChatColor.GOLD + "Hello " + ChatColor.BOLD + "World" + ChatColor.RED + "!"
+                + ChatColor.GOLD + " xd", component.toLegacyText() );
+    }
+
+    @Test
+    public void testExtraFormattingNested()
+    {
+        BaseComponent component = new ComponentBuilder( "Hello " ).color( ChatColor.GOLD ).build();
+        component.addExtra( new TextComponent( new ComponentBuilder( "World" ).bold( true ).build() ) );
+        component.addExtra( new TextComponent( new ComponentBuilder( "!" ).color( ChatColor.RED ).build() ) );
+        component.addExtra( new TextComponent( new ComponentBuilder( " xd" ).build() ) );
+
+        assertEquals( "Hello World! xd", component.toPlainText() );
+        // Empty extra text component 2 (holding extra "!") adds the redudant gold formatting,
+        // see TextComponent#toLegacyText comment as to why we keep it
+        assertEquals( ChatColor.GOLD + "Hello " + ChatColor.BOLD + "World" + ChatColor.GOLD + ChatColor.RED + "!"
+                + ChatColor.GOLD + " xd", component.toLegacyText() );
+    }
+
+    @Test
+    public void testArrayToLegacyConversionContext()
+    {
+        TextComponent world = new TextComponent( "World" );
+        world.setBold( true );
+        BaseComponent[] components = new BaseComponent[]
+        {
+            new TextComponent( "Hello " ),
+            world,
+            new TextComponent( "!" )
+        };
+
+        assertEquals( "Hello World!", BaseComponent.toPlainText( components ) );
+        assertEquals( "Hello " + ChatColor.BOLD + "World" + ChatColor.RESET + "!", BaseComponent.toLegacyText( components ) );
     }
 }
