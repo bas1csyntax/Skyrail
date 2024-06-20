@@ -26,7 +26,10 @@ import net.md_5.bungee.protocol.data.NumberFormat;
 import net.md_5.bungee.protocol.data.PlayerPublicKey;
 import net.md_5.bungee.protocol.data.Property;
 import net.md_5.bungee.protocol.util.ChatDeserializable;
-import net.md_5.bungee.protocol.util.ChatFunctionDeserializable;
+import net.md_5.bungee.protocol.util.ChatDeserializableJson;
+import net.md_5.bungee.protocol.util.ChatDeserializableTag;
+import net.md_5.bungee.protocol.util.ChatNewDeserializable;
+import net.md_5.bungee.protocol.util.ChatNewDeserializableTag;
 import net.md_5.bungee.protocol.util.Either;
 import net.md_5.bungee.protocol.util.TagUtil;
 import se.llbit.nbt.ErrorTag;
@@ -103,7 +106,7 @@ public abstract class DefinedPacket
 
     public static Either<String, ChatDeserializable> readEitherBaseComponent(ByteBuf buf, int protocolVersion, boolean string)
     {
-        return ( string ) ? Either.left( readString( buf ) ) : Either.right( readBaseComponent( buf, protocolVersion ) );
+        return string ? Either.left( readString( buf ) ) : Either.right( readBaseComponent( buf, protocolVersion ) );
     }
 
     public static ChatDeserializable readBaseComponent(ByteBuf buf, int protocolVersion)
@@ -115,14 +118,10 @@ public abstract class DefinedPacket
     {
         if ( protocolVersion >= ProtocolConstants.MINECRAFT_1_20_3 )
         {
-            SpecificTag nbt = (SpecificTag) readTag( buf, protocolVersion );
-
-            return new ChatFunctionDeserializable( Either.right( nbt ), (ov) -> ComponentSerializer.deserialize( TagUtil.toJson( ov.getRight() ) ) );
+            return new ChatDeserializableTag( (SpecificTag) readTag( buf, protocolVersion ) );
         } else
         {
-            String string = readString( buf, maxStringLength );
-
-            return new ChatFunctionDeserializable( Either.left( string ), (ov) -> ComponentSerializer.deserialize( ov.getLeft() ) );
+            return new ChatDeserializableJson( readString( buf, maxStringLength ) );
         }
     }
 
@@ -145,6 +144,13 @@ public abstract class DefinedPacket
 
             return ComponentSerializer.deserialize( string );
         }
+    }
+
+    public static ChatNewDeserializable readNewBaseComponent(ByteBuf buf, int protocolVersion)
+    {
+        SpecificTag nbt = (SpecificTag) readTag( buf, protocolVersion );
+
+        return new ChatNewDeserializableTag( nbt );
     }
 
     public static ComponentStyle readComponentStyle(ByteBuf buf, int protocolVersion)
@@ -225,6 +231,19 @@ public abstract class DefinedPacket
 
             writeString( string, buf );
         }
+    }
+
+    public static void writeNewBaseComponent(ChatNewDeserializable message, ByteBuf buf, int protocolVersion)
+    {
+        SpecificTag nbt;
+        if ( message.hasDeserialized() )
+        {
+            nbt = TagUtil.fromJson( ComponentSerializer.toJson( message.get() ) );
+        } else
+        {
+            nbt = message.original();
+        }
+        writeTag( nbt, buf, protocolVersion );
     }
 
     public static void writeComponentStyle(ComponentStyle style, ByteBuf buf, int protocolVersion)
